@@ -8,7 +8,7 @@ from ultralytics import YOLO
 import os
 import time
 
-model_name = "epoc80yolov8n.pt"
+model_name = "kullanilcak.pt"
 model = YOLO("./models/" + model_name)
 
 # Kullanıcıdan IP adresi ve port numarasını komut satırından al
@@ -48,6 +48,8 @@ try:
                         for r in results:
                             boxes = r.boxes
                             for box in boxes:
+                                if box.conf[0] < 0.90:
+                                    continue
                                 # Sınırlayıcı kutu koordinatlarını al
                                 x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
 
@@ -68,7 +70,7 @@ try:
                                 
                                 #! TODO: aldığın konumları drona anlık göndermenin yolunu bul !!!
                                 with open("./konum.txt", "a") as loc_file:
-                                    loc_file.write(f"{(x1 + x2) / 2},{(y1 + y2) / 2}")
+                                    loc_file.write(f"{(x1 + abs(x1-x2)/2) / 2},{(y1 + abs(y1-y2)/2) / 2}\n")
 
                         start_time = time.time()
 

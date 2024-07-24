@@ -31,7 +31,7 @@ try:
                 frame = cv2.imdecode(npdata, cv2.IMREAD_COLOR)
                 
                 if frame is not None:
-                    cv2.imshow('Receiving Video', frame)  # Görüntüyü göster
+                    cv2.imshow('Canlı Video', frame)  # Görüntüyü göster
                 
                 buffer = b''  # Yeni görüntü için tamponu sıfırla
 
