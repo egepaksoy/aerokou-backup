@@ -341,3 +341,22 @@ def calc_hipo_angle(screen_rat_x_y, x_y, alt, yaw, alt_met):
 
     #       metre       derece
     return hipo*alt/alt_met, (yaw + angle) % 360
+
+import socket
+
+# Mesaj gonderir
+def send_message(hedef_ip, hedef_port, mesaj):
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
+        client_socket.sendto(mesaj.encode(), (hedef_ip, hedef_port))
+        response, _ = client_socket.recvfrom(1024)
+        print(f"Gonderildi: {response.decode()}")
+
+# Mesaj bekler
+def start_server(hedef_ip, hedef_port):
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as server_socket:
+        server_socket.bind((hedef_ip, hedef_port))
+        print(f"{hedef_ip}:{hedef_port} adresi dinleniyor")
+        while True:
+            data, addr = server_socket.recvfrom(1024)
+            print(f"{addr} adresinden alındı: {data.decode()}")
+            server_socket.sendto(data, addr)  # İsteğe bağlı olarak geri yanıt gönderir

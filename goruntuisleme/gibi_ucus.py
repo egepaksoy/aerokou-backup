@@ -1,3 +1,4 @@
+#! RASPBERRY
 import time
 import json
 import math
@@ -12,7 +13,7 @@ lon = 30.0259418
 screen_rat = (640, 480)
 
 
-vehicle = Vehicle("/dev/ttyACM0")
+vehicle = Vehicle("COM6")
 
 vehicle.takeoff_mod(alt=ALT, mod="AUTO")
 
@@ -52,12 +53,12 @@ try:
                         location = (drone_pos[0] + (int(hipo)*math.sin(math.radians(angle)))*vehicle.DEG, drone_pos[1] + (int(hipo)*math.cos(math.radians(angle)))*vehicle.DEG)
                         a = 0
                         for l in pos:
-                            if abs(location[0] - l[0]) <= vehicle.DEG/4 and abs(location[1] - l[1]) <= vehicleDEG/4:
+                            if abs(location[0] - l[0]) <= vehicle.DEG/4 and abs(location[1] - l[1]) <= vehicle.DEG/4:
                                 a = 1
                         if a == 0:
                             pos.append(location)
                             print(f"Ates algilandi\n{location} konumunda")
-        
+
         if on_miss2 == False:
             if abs(vehicle.get_pos()[0] - lat) <= vehicle.DEG/2 and abs(vehicle.get_pos()[1] - lon) <= vehicle.DEG/2:
                 print("Konuma gelindi")
@@ -65,7 +66,7 @@ try:
                     print("Ates bulunamadı")
                     print("Gorev iptal edildi")
                     on_mission = False
-                
+
                 else:
                     on_miss2 = True
                     print("Atese gidiliyor...")
@@ -77,7 +78,7 @@ try:
                         seq += 1
 
                     print("Waypointler eklendi atese gidiliyor...")
-        
+
         if on_miss2 == True:
             if vehicle.get_miss_wp() == last_seq and abs(vehicle.get_pos()[0] - last_pos[0]) <= vehicle.DEG/2 and abs(vehicle.get_pos()[1] - last_pos[1]) <= vehicle.DEG/2:
                 print("Atese gelindi")

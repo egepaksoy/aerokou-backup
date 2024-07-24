@@ -1,3 +1,4 @@
+#! GIBI
 import sys
 import cv2
 import socket
@@ -65,6 +66,7 @@ try:
                                 cv2.putText(frame, f"{class_name} {conf:.2f}", (int(x1), int(y1 - 10)), 
                                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                                 
+                                #! TODO: aldığın konumları drona anlık göndermenin yolunu bul !!!
                                 with open("./konum.txt", "a") as loc_file:
                                     loc_file.write(f"{(x1 + x2) / 2},{(y1 + y2) / 2}")
 
