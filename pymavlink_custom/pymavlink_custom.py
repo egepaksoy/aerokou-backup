@@ -181,11 +181,13 @@ class Vehicle():
         sign = 1
         i = 0
         while i <= (area_meter / distance_meter):
-            self.add_mission(seq=seq + i, lat=center_lat + (met + distance_meter * i) * self.DEG, lon=center_lon + (met * sign) * self.DEG, alt=alt, drone_id=drone_id)
+            last_waypoint = (center_lat + (met + distance_meter * i) * self.DEG, center_lon + (met * sign) * self.DEG)
+            last_seq = seq + i
+            self.add_mission(seq=last_seq, lat=last_waypoint[0], lon=last_waypoint[1], alt=alt, drone_id=drone_id)
             sign *= -1
             i += 1
         
-        return seq + i, (center_lat + (met + distance_meter * (i - 1)) * self.DEG, center_lon + (met * (sign * -1)) * self.DEG)
+        return last_seq, last_waypoint
     
     # Eski tarama kodu
     def eski_scan_area(self, seq, center_lat, center_lon, alt, area_meter, distance_meter, drone_id: int=None):
