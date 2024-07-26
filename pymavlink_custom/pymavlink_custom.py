@@ -4,7 +4,7 @@ import time
 import math
 
 class Vehicle():
-    def __init__(self, address: str, baud: int=57600, autoreconnect: bool=True, drone_id: int=2):
+    def __init__(self, address: str, baud: int=57600, autoreconnect: bool=True, drone_id: int=1):
         self.check_address(address=address)
         self.vehicle = mavutil.mavlink_connection(address, baud=baud, autoreconnect=autoreconnect)
         self.vehicle.wait_heartbeat()
@@ -20,7 +20,9 @@ class Vehicle():
         # 1 Metre
         self.DEG = 0.00001144032
         self.wp = mavwp.MAVWPLoader()
+        self.drone_id = drone_id
         self.drone_ids = self.get_all_drone_ids()
+
 
     # Baglantidaki tum drone idlerini getirir
     def get_all_drone_ids(self):
@@ -35,7 +37,9 @@ class Vehicle():
         return drone_ids
 
     # Waypointleri döndürür
-    def get_wp_list(self, drone_id: int=2):
+    def get_wp_list(self, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         self.vehicle.mav.mission_request_list_send(drone_id, self.vehicle.target_component)
         msg = self.vehicle.recv_match(type='MISSION_COUNT', blocking=True)
         waypoint_count = msg.count
@@ -49,7 +53,9 @@ class Vehicle():
         return waypoints
 
     # Cekilecek mesajları ister
-    def request_message_interval(self, message_input: str, frequency_hz: float, drone_ids: list=[2]):
+    def request_message_interval(self, message_input: str, frequency_hz: float, drone_ids: list=None):
+        if drone_ids is None:
+            drone_ids = self.drone_ids
         for drone_id in drone_ids:
             message_name = "MAVLINK_MSG_ID_" + message_input
             message_id = getattr(mavutil.mavlink, message_name)
@@ -63,7 +69,9 @@ class Vehicle():
             print(f"{drone_id} id'li drona {message_input} mesajı basairyla iletildi.")
 
     # Dronun konumunu döndürür
-    def get_pos(self, drone_id: int=2):
+    def get_pos(self, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         while True:
             message = self.vehicle.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
             if message and message.get_srcSystem() == drone_id:
@@ -76,7 +84,9 @@ class Vehicle():
                 time.sleep(1)
 
     # Anlık waypoint'i döndürür
-    def get_miss_wp(self, drone_id: int=2):
+    def get_miss_wp(self, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         while True:
             message = self.vehicle.recv_match(type='MISSION_ITEM_REACHED', blocking=True)
             if message and message.get_srcSystem() == drone_id:
@@ -84,7 +94,9 @@ class Vehicle():
             return 0
 
     # Yaw acisini derece cinsinden dondurur
-    def get_yaw(self, drone_id: int=2):
+    def get_yaw(self, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         while True:
             message = self.vehicle.recv_match(type='ATTITUDE', blocking=True)
             if message and message.get_srcSystem() == drone_id:
@@ -97,13 +109,17 @@ class Vehicle():
                 time.sleep(1)
 
     # Komut gercekleştirme mesaşlarını bekler
-    def ack(self, keyword, drone_id: int=2):
+    def ack(self, keyword, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         msg = self.vehicle.recv_match(type=keyword, blocking=True)
         if msg and msg.get_srcSystem() == drone_id:
             print("-- Message Read " + str(msg))
 
     # ID'li drone'nun waypointlerini siler
-    def clear_wp_target(self, drone_id: int=2):
+    def clear_wp_target(self, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         if self.vehicle.mav.mavlink10():
             self.vehicle.mav.mission_clear_all_send(drone_id, self.vehicle.target_component)
         else:
@@ -116,7 +132,9 @@ class Vehicle():
         print("Waypointler silindi")
 
     # Tım waypointleri cekerek ger yeni waypoint gonderildiginde hepsini tekrar gonderir
-    def eski_add_mission(self,  seq, lat, lon, alt, drone_id: int=2):
+    def eski_add_mission(self,  seq, lat, lon, alt, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
         self.wp.add(mavutil.mavlink.MAVLink_mission_item_message(
             drone_id, self.vehicle.target_component,
@@ -131,7 +149,9 @@ class Vehicle():
                 print("Sending waypoints {0}".format(msg.seq))
 
     # Waypoint ekler
-    def add_mission(self, seq, lat, lon, alt, drone_id: int=2):
+    def add_mission(self, seq, lat, lon, alt, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         if seq == 0:
             self.clear_wp_target(drone_id=drone_id)
 
@@ -154,7 +174,9 @@ class Vehicle():
         print(f"Waypoint {seq} sent")
 
     # Drone'u belirtilen alana tarama yapacak şekilde waypointler ekler
-    def scan_area(self, seq, center_lat, center_lon, alt, area_meter, distance_meter, drone_id: int=2):
+    def scan_area(self, seq, center_lat, center_lon, alt, area_meter, distance_meter, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         met = -1 * (area_meter / 2)
         sign = 1
         i = 0
@@ -166,7 +188,9 @@ class Vehicle():
         return seq + i, (center_lat + (met + distance_meter * (i - 1)) * self.DEG, center_lon + (met * (sign * -1)) * self.DEG)
     
     # Eski tarama kodu
-    def eski_scan_area(self, seq, center_lat, center_lon, alt, area_meter, distance_meter, drone_id: int=2):
+    def eski_scan_area(self, seq, center_lat, center_lon, alt, area_meter, distance_meter, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         met = -1 * (area_meter / 2)
         sign = 1
         i = 0
@@ -178,7 +202,9 @@ class Vehicle():
         return seq + i, (center_lat + (met + distance_meter * (i - 1)) * self.DEG, center_lon + (met * (sign * -1)) * self.DEG)
 
     # Drone'u arm eder veya disarm eder
-    def arm_disarm(self, arm, drone_id: int=2):
+    def arm_disarm(self, arm, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         if arm == 0 or arm == 1:
             self.vehicle.mav.command_long_send(drone_id, drone_id, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, arm, 0, 0, 0, 0, 0, 0)
             if arm == 1:
@@ -190,7 +216,9 @@ class Vehicle():
             exit()
 
     # Drona takeoff verir
-    def takeoff_mode(self, alt, mode: str, drone_id: int=2):
+    def takeoff_mode(self, alt, mode: str, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         self.set_mode(mode=mode, drone_id=drone_id)
         
         self.arm_disarm(arm=True, drone_id=drone_id)
@@ -211,7 +239,9 @@ class Vehicle():
 
         print(f"{alt} metreye yükseldi")
 
-    def takeoff(self, alt, drone_id: int=2):
+    def takeoff(self, alt, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         self.vehicle.mav.command_long_send(
             drone_id, self.vehicle.target_component,
             mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, alt)
@@ -228,7 +258,9 @@ class Vehicle():
 
         print(f"{alt} metreye yükseldi")
 
-    def set_mode(self, mode: str, drone_id: int=2):
+    def set_mode(self, mode: str, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         mode_id = self.vehicle.mode_mapping()[mode]
         if mode == "RTL":
             self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0, 0, 0, 0, 0)
@@ -257,7 +289,9 @@ class Vehicle():
 
         print(f"Mod {mode} yapıldı")
 
-    def is_armed(self, drone_id: int=2):
+    def is_armed(self, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         return self.vehicle.sysid_state[drone_id].armed
 
     def check_address(self, address):
@@ -267,13 +301,17 @@ class Vehicle():
                 exit()
         print("Baglanti yolu onaylandi")
 
-    def get_mode(self, drone_id: int=2):
+    def get_mode(self, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
         msg = self.vehicle.recv_match(type="HEARTBEAT", blocking=True)
         if msg and msg.get_srcSystem() == drone_id:
             return mavutil.mode_string_v10(msg)
         return 0
 
-    def set_servo(self, drone_id: int=2, channel: int=7):
+    def set_servo(self, drone_id: int=None, channel: int=7):
+        if drone_id is None:
+            drone_id = self.drone_id
         self.vehicle.mav.command_long_send(
             drone_id,
             self.vehicle.target_component,
@@ -282,7 +320,6 @@ class Vehicle():
             channel,
             1750,
             0, 0, 0, 0, 0)
-        print("Servo aciliyor...")
         time.sleep(3)
         self.vehicle.mav.command_long_send(
             drone_id,
@@ -302,10 +339,11 @@ class Vehicle():
             0,
             0, 0, 0, 0, 0)
 
-        print("Servo durduruldu")
 
     # Konumda oldugunu kontrol etme
-    def on_location(self, loc, seq, sapma: int=4, drone_id: int=2, check_seq: bool=True):
+    def on_location(self, loc, seq, sapma: int=4, drone_id: int=None, check_seq: bool=True):
+        if drone_id is None:
+            drone_id = self.drone_id
         if check_seq:
             if abs(self.get_pos(drone_id=drone_id)[0] - loc[0]) <= self.DEG/sapma and abs(self.get_pos(drone_id=drone_id)[1] - loc[1]) <= self.DEG/sapma and self.get_miss_wp(drone_id=drone_id) == seq:
                 return True
@@ -353,22 +391,3 @@ def calc_hipo_angle(screen_rat_x_y, x_y, alt, yaw, alt_met):
 
     #       metre       derece
     return hipo*alt/alt_met, (yaw + angle) % 360
-
-import socket
-
-# Mesaj gonderir
-def send_message(hedef_ip, hedef_port, mesaj):
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
-        client_socket.sendto(mesaj.encode(), (hedef_ip, hedef_port))
-        response, _ = client_socket.recvfrom(1024)
-        print(f"Gonderildi: {response.decode()}")
-
-# Mesaj bekler
-def start_server(hedef_ip, hedef_port):
-    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as server_socket:
-        server_socket.bind((hedef_ip, hedef_port))
-        print(f"{hedef_ip}:{hedef_port} adresi dinleniyor")
-        while True:
-            data, addr = server_socket.recvfrom(1024)
-            print(f"{addr} adresinden alındı: {data.decode()}")
-            server_socket.sendto(data, addr)  # İsteğe bağlı olarak geri yanıt gönderir
