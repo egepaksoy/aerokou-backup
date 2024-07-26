@@ -1,4 +1,4 @@
-#! RASPBERRY
+#! GIBI
 import time
 import json
 import math
