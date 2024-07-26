@@ -4,24 +4,26 @@ import time
 import math
 
 class Vehicle():
-    def __init__(self, address: str, baud: int=57600, autoreconnect: bool=True, drone_id: int=1):
+    def __init__(self, address: str, baud: int=57600, autoreconnect: bool=True, drone_id: int=1, on_flight: bool=True):
         self.check_address(address=address)
         self.vehicle = mavutil.mavlink_connection(address, baud=baud, autoreconnect=autoreconnect)
         self.vehicle.wait_heartbeat()
         print("Bağlantı başarılı")
-        print(f"Ucustaki drone idleri: {self.get_all_drone_ids()}")
-
-        self.request_message_interval("ATTITUDE", 1)
-        self.request_message_interval("GLOBAL_POSITION_INT", 2)
-        self.request_message_interval("MISSION_ITEM_REACHED", 3)
-
-        print("Mesajlar gonderildi")
-
+        self.drone_id = drone_id
         # 1 Metre
         self.DEG = 0.00001144032
-        self.wp = mavwp.MAVWPLoader()
-        self.drone_id = drone_id
-        self.drone_ids = self.get_all_drone_ids()
+
+        if on_flight:
+            self.drone_ids = self.get_all_drone_ids()
+            print(f"Ucustaki drone idleri: {self.drone_ids}")
+
+            self.request_message_interval("ATTITUDE", 1)
+            self.request_message_interval("GLOBAL_POSITION_INT", 2)
+            self.request_message_interval("MISSION_ITEM_REACHED", 3)
+
+            print("Mesajlar gonderildi")
+
+            self.wp = mavwp.MAVWPLoader()
 
 
     # Baglantidaki tum drone idlerini getirir
@@ -299,7 +301,7 @@ class Vehicle():
     def check_address(self, address):
         if "udp" not in address:
             if not os.path.exists(address):
-                print("ACM dosya yolu yanlis yada yok:\n", address)
+                print("Dosya yolu yanlis yada yok:\n", address)
                 exit()
         print("Baglanti yolu onaylandi")
 
@@ -311,7 +313,7 @@ class Vehicle():
             return mavutil.mode_string_v10(msg)
         return 0
 
-    def set_servo(self, drone_id: int=None, channel: int=7):
+    def set_servo(self, drone_id: int=None, channel: int=9):
         if drone_id is None:
             drone_id = self.drone_id
         self.vehicle.mav.command_long_send(
@@ -334,7 +336,7 @@ class Vehicle():
         time.sleep(3)
         self.vehicle.mav.command_long_send(
             drone_id,
-            drone_id,
+            self.vehicle.target_component,
             mavutil.mavlink.MAV_CMD_DO_SET_SERVO,
             0,
             channel,
