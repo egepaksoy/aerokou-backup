@@ -87,13 +87,13 @@ try:
                     # print("Poster konumlari cekilemedi gorev iptal edildi")
                     # exit()
                 print("Feniks goreve basliyor...")
+                vehicle.takeoff_mode(mode="GUIDED", alt=feniks_alt, drone_id=feniks_id)
+                print("Feniks takeoff aldi")
                 feniks_takeoff = vehicle.get_pos(drone_id=feniks_id)
                 if not feniks_takeoff:
                     print("Feniks takeoff konumu alınamadi gorev iptal")
                     exit()
                 print("Feniks takeoff konumu: ", feniks_takeoff)
-                vehicle.takeoff_mode(mode="GUIDED", alt=feniks_alt, drone_id=feniks_id)
-                print("Feniks takeoff aldi")
                 poster_konumu = poster_konumlar[0]
                 vehicle.add_mission(seq=0, lat=poster_konumu[0], lon=poster_konumu[1], alt=feniks_alt, drone_id=feniks_id)
                 vehicle.add_mission(seq=1, lat=poster_konumu[0], lon=poster_konumu[1], alt=feniks_alt, drone_id=feniks_id)

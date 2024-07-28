@@ -227,7 +227,6 @@ class Vehicle():
 
         self.set_mode(mode=mode, drone_id=drone_id)
         self.arm_disarm(arm=True, drone_id=drone_id)
-        time.sleep(0.5)
         
         self.vehicle.mav.command_long_send(
             drone_id, self.vehicle.target_component,
