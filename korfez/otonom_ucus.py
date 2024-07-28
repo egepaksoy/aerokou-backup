@@ -9,7 +9,7 @@ from pymavlink_custom import Vehicle, calc_hipo_angle
 screen_rat = (640, 480)
 
 
-vehicle = Vehicle("COM7", drone_id=1)
+vehicle = Vehicle("COM7", drone_id=2)
 
 try:
     with open("./poster_konum.txt", "w+") as pos_file:

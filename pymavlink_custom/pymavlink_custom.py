@@ -9,9 +9,9 @@ class Vehicle():
         self.vehicle = mavutil.mavlink_connection(address, baud=baud, autoreconnect=autoreconnect)
         self.vehicle.wait_heartbeat()
         print("Bağlantı başarılı")
-        self.drone_id = drone_id
+        self.drone_id = self.vehicle.target_system
         # 1 Metre
-        self.DEG = 0.00001144032
+        self.DEG = 0.00001172485
 
         if on_flight:
             self.drone_ids = self.get_all_drone_ids()
@@ -122,7 +122,7 @@ class Vehicle():
     def clear_wp_target(self, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
-        if self.vehicle.mav.mavlink10():
+        if self.vehicle.mavlink10():
             self.vehicle.mav.mission_clear_all_send(drone_id, self.vehicle.target_component)
         else:
             self.vehicle.mav.waypoint_clear_all_send(drone_id, self.vehicle.target_component)
@@ -210,11 +210,12 @@ class Vehicle():
         if drone_id is None:
             drone_id = self.drone_id
         if arm == 0 or arm == 1:
-            self.vehicle.mav.command_long_send(drone_id, drone_id, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, arm, 0, 0, 0, 0, 0, 0)
+            self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, arm, 0, 0, 0, 0, 0, 0)
+            if arm == 0:
+                print("Disarm edildi")
             if arm == 1:
-                print(f"{drone_id} idli drone arm edildi")
-            elif arm == 0:
-                print(f"{drone_id} idli drone disarm edildi")
+                print("ARM edildi")
+
         else:
             print(f"Gecersiz arm kodu: {arm}")
             exit()
@@ -223,8 +224,8 @@ class Vehicle():
     def takeoff_mode(self, alt, mode: str, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
+
         self.set_mode(mode=mode, drone_id=drone_id)
-        
         self.arm_disarm(arm=True, drone_id=drone_id)
         time.sleep(0.5)
         
@@ -313,7 +314,7 @@ class Vehicle():
             return mavutil.mode_string_v10(msg)
         return 0
 
-    def set_servo(self, drone_id: int=None, channel: int=9):
+    def set_servo(self, drone_id: int=None, channel: int=9, pvm: int=1000):
         if drone_id is None:
             drone_id = self.drone_id
         self.vehicle.mav.command_long_send(
@@ -323,24 +324,6 @@ class Vehicle():
             0,
             channel,
             1750,
-            0, 0, 0, 0, 0)
-        time.sleep(3)
-        self.vehicle.mav.command_long_send(
-            drone_id,
-            self.vehicle.target_component,
-            mavutil.mavlink.MAV_CMD_DO_SET_SERVO,
-            0,
-            channel,
-            1000,
-            0, 0, 0, 0, 0)
-        time.sleep(3)
-        self.vehicle.mav.command_long_send(
-            drone_id,
-            self.vehicle.target_component,
-            mavutil.mavlink.MAV_CMD_DO_SET_SERVO,
-            0,
-            channel,
-            0,
             0, 0, 0, 0, 0)
 
 

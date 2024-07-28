@@ -3,14 +3,16 @@ import sys
 sys.path.append('../pymavlink_custom')
 from pymavlink_custom import Vehicle
 
-vehicle = Vehicle("COM7")
+vehicle = Vehicle("COM6")
 
 ALT = 5
-lat = 40.711
-lon = 30.025
+lat = 40.7119942
+lon = 30.0246006
 
 try:
-    vehicle.takeoff_mode(alt=ALT, mode="GUIDED")
+    vehicle.arm_disarm(arm=True)
+    vehicle.set_mode(mode="GUIDED")
+    vehicle.takeoff(alt=ALT)
     vehicle.add_mission(seq=0, lat=lat, lon=lon, alt=ALT)
     vehicle.add_mission(seq=1, lat=lat, lon=lon, alt=ALT)
 

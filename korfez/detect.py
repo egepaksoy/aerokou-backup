@@ -28,8 +28,14 @@ try:
 
     with open("./konum.txt", "w") as loc_file:
         loc_file.close()
+    
+    goruntu_isleme = True
 
     while True:
+        with open("./gorev_dosyaları/miss_file.txt", "r") as miss_file:
+            for line in miss_file:
+                if line == "korfez=False":
+                    goruntu_isleme = False
         data, addr = sock.recvfrom(BUFFER_SIZE)  # Maksimum UDP paket boyutu kadar veri al
         
         # Çerçeve numarasını çöz
@@ -43,7 +49,7 @@ try:
                 frame = cv2.imdecode(npdata, cv2.IMREAD_COLOR)
                 
                 if frame is not None:
-                    if time.time() - start_time > 0.1:
+                    if time.time() - start_time > 0.1 and goruntu_isleme:
                         results = model(frame)
                         for r in results:
                             boxes = r.boxes

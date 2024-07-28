@@ -6,14 +6,13 @@ import sys
 sys.path.append("../pymavlink_custom/")
 from pymavlink_custom import Vehicle, calc_hipo_angle
 
-ALT = 3
-lat = 40.7126653
-lon = 30.0259418
+ALT = 5
+lat = 40.7119890
+lon = 30.0245963
 
 screen_rat = (32, 24)
 
-
-vehicle = Vehicle("COM7")
+vehicle = Vehicle("COM7", drone_id=1)
 
 try:
     print("Takeoff alınıyor..")
@@ -62,7 +61,11 @@ try:
             ############## KONUMA GITME KISMI ############
             if vehicle.on_location(loc=scan_last_waypoint, seq=scan_last_seq):
                 print("Tarama bitti")
-                print("Ates konumları giriliyor...")
+                print("Ates konumlari elde edildi")
+                vehicle.add_mission(seq=scan_last_seq+1, lat=lat, lon=lon, alt=ALT)
+                print("Son konum girildi")
+                on_miss2 = True
+                '''
                 on_miss2 = True
                 
                 if len(pos) != 0:
@@ -78,8 +81,16 @@ try:
                 else:
                     print("Ates konumları bulunmadı")
                     on_mission = False
+                '''
             ############## KONUMA GITME KISMI ############
+
+        if on_miss2 == True:
+            if vehicle.on_location(loc=(lat, lon), seq=scan_last_seq + 1):
+                print("RTL aliniyor...")
+                vehicle.set_mode("RTL")
+                on_mission = False
         
+        '''
         if on_miss2 == True:
             for i, loc in enumerate(pos):
                 if vehicle.on_location(loc=loc, seq=scan_last_seq + 1 + i):
@@ -93,6 +104,7 @@ try:
                 print("RTL Alındı...")
                 vehicle.set_mode("RTL")
                 on_mission = False
+        '''
 
 except KeyboardInterrupt:
     print("Koddan çıkıldı.")
