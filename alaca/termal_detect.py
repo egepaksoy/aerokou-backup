@@ -59,9 +59,9 @@ def main():
             y += 1
 
         if new_maxt != 0 and bozuk(T_array) == False:
-            with open("./fire-temp.txt", "a+") as f:
+            with open("./konum.txt", "a+") as f:
                 print("YENI EN YUKSEK SICAKLIK: ", str(maxt))
-                f.write(f"{maxt}|{new_maxt_index}\n")
+                f.write(f"{new_maxt_index[0]},{new_maxt_index[1]},{maxt}\n")
 
         with open("./miss-file.txt", "r") as miss_file:
             for line in miss_file:
@@ -120,9 +120,10 @@ def main():
                     ser = serial.Serial ('/dev/serial0')
                     ser.baudrate = 115200
             
-            for temp in temp_array:
-                if temp > maxt:
-                    maxt = temp
+            else:
+                for temp in temp_array:
+                    if temp > maxt:
+                        maxt = temp
                     
 
             ta_img = td_to_image(temp_array)
@@ -153,6 +154,6 @@ def main():
     ser.close()
     #cv2.destroyAllWindows()
 if __name__ == "__main__":
-    fire_file = open("./fire-temp.txt", "w+")
+    fire_file = open("./konum.txt", "w+")
     fire_file.close()
     main()

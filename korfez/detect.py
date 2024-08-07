@@ -32,7 +32,7 @@ try:
     goruntu_isleme = True
 
     while True:
-        with open("./gorev_dosyaları/miss_file.txt", "r") as miss_file:
+        with open("./gorev_dosyaları/mission_file.txt", "r") as miss_file:
             for line in miss_file:
                 if line == "korfez=False":
                     goruntu_isleme = False
@@ -74,12 +74,14 @@ try:
                                 cv2.putText(frame, f"{class_name} {conf:.2f}", (int(x1), int(y1 - 10)), 
                                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
                                 
-                                #! TODO: aldığın konumları drona anlık göndermenin yolunu bul !!!
-                                with open("./konum.txt", "a") as loc_file:
-                                    loc_file.write(f"{(x1 + abs(x1-x2)/2) / 2},{(y1 + abs(y1-y2)/2) / 2}\n")
+                                # korfez_konum.txt dosyası formatı:
+                                # x1,y1,x2,y2\n
+                                # TODO: aldığın konumları drona anlık göndermenin yolunu bul !!!
+                                with open("./gorev_dosyaları/korfez_konum.txt", "a") as loc_file:
+                                    loc_file.write(f"{x1},{y1},{x2},{y2}\n")
 
                         start_time = time.time()
-
+                    
                     cv2.imshow('YOLOv8 Canlı Tespit', frame)  # Görüntüyü göster
                 
                 buffer = b''  # Yeni görüntü için tamponu sıfırla

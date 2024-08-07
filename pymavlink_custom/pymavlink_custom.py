@@ -1,4 +1,5 @@
 from pymavlink import mavutil, mavwp
+from pymavlink.dialects.v10 import ardupilotmega as mavlink
 import os
 import time
 import math
@@ -6,16 +7,26 @@ import math
 class Vehicle():
     def __init__(self, address: str, baud: int=57600, autoreconnect: bool=True, drone_id: int=1, on_flight: bool=True):
         self.check_address(address=address)
-        self.vehicle = mavutil.mavlink_connection(address, baud=baud, autoreconnect=autoreconnect)
+        self.vehicle = mavutil.mavlink_connection(device=address, baud=baud, autoreconnect=autoreconnect)
         self.vehicle.wait_heartbeat()
         print("Bağlantı başarılı")
-        self.drone_id = self.vehicle.target_system
+        self.drone_id = drone_id
+        self.drone_ids = []
         # 1 Metre
         self.DEG = 0.00001172485
 
         if on_flight:
-            self.drone_ids = self.get_all_drone_ids()
-            print(f"Ucustaki drone idleri: {self.drone_ids}")
+            drone_idler = self.get_all_drone_ids()
+
+            for d_id in drone_idler:
+                if d_id != 255:
+                    self.drone_ids.append(d_id)
+
+            if len(self.drone_ids) == 1:
+                print(f"Ucusta tek drone var ve id'si: {self.drone_id}")
+                self.drone_id = list(drone_idler)[0]
+            else:
+                print("Ucustaki drone idleri: ", self.drone_ids)
 
             self.request_message_interval("ATTITUDE", 1)
             self.request_message_interval("GLOBAL_POSITION_INT", 2)
@@ -25,13 +36,12 @@ class Vehicle():
 
             self.wp = mavwp.MAVWPLoader()
 
-
     # Baglantidaki tum drone idlerini getirir
     def get_all_drone_ids(self):
         drone_ids = set()
 
         start_time = time.time()
-        while time.time() - start_time < 1.5:
+        while time.time() - start_time < 3:
             msg = self.vehicle.recv_match(type='HEARTBEAT', blocking=True)
             if msg:
                 drone_ids.add(msg.get_srcSystem())
@@ -42,6 +52,7 @@ class Vehicle():
     def get_wp_list(self, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
+
         self.vehicle.mav.mission_request_list_send(drone_id, self.vehicle.target_component)
         msg = self.vehicle.recv_match(type='MISSION_COUNT', blocking=True)
         waypoint_count = msg.count
@@ -74,6 +85,7 @@ class Vehicle():
     def get_pos(self, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
+
         while True:
             message = self.vehicle.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
             if message and message.get_srcSystem() == drone_id:
@@ -81,24 +93,25 @@ class Vehicle():
                 lon = message.lon / 1e7
                 alt = message.relative_alt / 1e3
                 return lat, lon, alt
-            else:
-                print("Konum bekleniyor...")
-                time.sleep(1)
+            print("Konum bekleniyor...")
 
     # Anlık waypoint'i döndürür
     def get_miss_wp(self, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
+
         while True:
             message = self.vehicle.recv_match(type='MISSION_ITEM_REACHED', blocking=True)
             if message and message.get_srcSystem() == drone_id:
                 return int(message.seq)
-            return 0
+            print("Waypoint mesaji bekleniyor...")
 
+    # TODO: TEST ET
     # Yaw acisini derece cinsinden dondurur
     def get_yaw(self, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
+
         while True:
             message = self.vehicle.recv_match(type='ATTITUDE', blocking=True)
             if message and message.get_srcSystem() == drone_id:
@@ -106,18 +119,20 @@ class Vehicle():
                 if yaw_deg < 0:
                     yaw_deg += 360
                 return yaw_deg
-            else:
-                print("Yaw acisi cekiliyor...")
-                time.sleep(1)
+            print("Yaw acisi cekiliyor...")
 
     # Komut gercekleştirme mesaşlarını bekler
-    def ack(self, keyword, drone_id: int=None):
+    def ack(self, keyword: str=None, keywords: list=None, drone_id: int=None):
+        if keywords is None:
+            keywords = [keyword]
         if drone_id is None:
             drone_id = self.drone_id
-        msg = self.vehicle.recv_match(type=keyword, blocking=True)
-        if msg and msg.get_srcSystem() == drone_id:
+        msg = self.vehicle.recv_match(type=keywords, blocking=True)
+        if msg.get_srcSystem() == drone_id and msg:
             print("-- Message Read " + str(msg))
-
+            return True
+        return False
+        
     # ID'li drone'nun waypointlerini siler
     def clear_wp_target(self, drone_id: int=None):
         if drone_id is None:
@@ -128,53 +143,38 @@ class Vehicle():
             self.vehicle.mav.waypoint_clear_all_send(drone_id, self.vehicle.target_component)
         print(f"{drone_id} idli drone'nun waypointleri silindi")
 
-    # Dronun waypointlerini siler
-    def clear_wp(self):
-        self.vehicle.waypoint_clear_all_send()
-        print("Waypointler silindi")
-
+    # TODO: TEK WP EKLEYEN VERSIYONUNA BAK
     # Tım waypointleri cekerek ger yeni waypoint gonderildiginde hepsini tekrar gonderir
-    def eski_add_mission(self,  seq, lat, lon, alt, drone_id: int=None):
+    def add_mission(self, seq, lat, lon, alt, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
-        frame = mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT
+
         self.wp.add(mavutil.mavlink.MAVLink_mission_item_message(
             drone_id, self.vehicle.target_component,
-            seq, frame,
+            seq, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
             mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, lat, lon, alt))
+
         self.vehicle.waypoint_clear_all_send()
         self.vehicle.waypoint_count_send(self.wp.count())
+
         for i in range(self.wp.count()):
             msg = self.vehicle.recv_match(type=["MISSION_REQUEST"], blocking=True)
             if msg.get_srcSystem() == drone_id and msg:
                 self.vehicle.mav.send(self.wp.wp(msg.seq))
                 print("Sending waypoints {0}".format(msg.seq))
 
-    # Waypoint ekler
-    def add_mission(self, seq, lat, lon, alt, drone_id: int=None):
+    # TODO: HIZ AYARLAMASINA BAK
+    # Dronu guided modunda hareket ettirir
+    def go_to(self, lat, lon, alt, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
-        if seq == 0:
-            self.clear_wp_target(drone_id=drone_id)
-
-        mission = mavutil.mavlink.MAVLink_mission_item_message(
-            target_system=drone_id,
-            target_component=self.vehicle.target_component,
-            seq=seq,
-            frame=mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
-            command=mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
-            current=0 if seq > 1 else 1,  # İlk waypoint'i current olarak ayarla
-            autocontinue=1,
-            param1=0, param2=0, param3=0, param4=0,
-            x=lat,
-            y=lon,
-            z=alt
-        )
-
-        self.vehicle.mav.send(mission)
-        self.ack(keyword="MISSION_ACK", drone_id=drone_id)
-        print(f"Waypoint {seq} sent")
-
+        self.vehicle.mav.send(mavutil.mavlink.MAVLink_set_position_target_global_int_message(10, drone_id,
+                        self.vehicle.target_component, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                        int(0b110111111000),
+                        int(lat * 1e7), int(lon * 1e7), alt,
+                        0, 0, 0, 0, 0, 0, 0, 0)
+                    )
+    # TODO: TEKRAR BAK
     # Drone'u belirtilen alana tarama yapacak şekilde waypointler ekler
     def scan_area(self, seq, center_lat, center_lon, alt, area_meter, distance_meter, drone_id: int=None):
         if drone_id is None:
@@ -185,67 +185,32 @@ class Vehicle():
         while i <= (area_meter / distance_meter):
             last_waypoint = (center_lat + (met + distance_meter * i) * self.DEG, center_lon + (met * sign) * self.DEG)
             last_seq = seq + i
-            self.add_mission(seq=last_seq, lat=last_waypoint[0], lon=last_waypoint[1], alt=alt, drone_id=drone_id)
+            self.add_mission(seq=seq + i, lat=center_lat + (met + distance_meter * i) * self.DEG, lon=center_lon + (met * sign) * self.DEG, alt=alt, drone_id=drone_id)
             sign *= -1
             i += 1
         
         return last_seq, last_waypoint
-    
-    # Eski tarama kodu
-    def eski_scan_area(self, seq, center_lat, center_lon, alt, area_meter, distance_meter, drone_id: int=None):
-        if drone_id is None:
-            drone_id = self.drone_id
-        met = -1 * (area_meter / 2)
-        sign = 1
-        i = 0
-        while i <= (area_meter / distance_meter):
-            self.eski_add_mission(seq=seq + i, lat=center_lat + (met + distance_meter * i) * self.DEG, lon=center_lon + (met * sign) * self.DEG, alt=alt, drone_id=drone_id)
-            sign *= -1
-            i += 1
-        
-        return seq + i, (center_lat + (met + distance_meter * (i - 1)) * self.DEG, center_lon + (met * (sign * -1)) * self.DEG)
 
     # Drone'u arm eder veya disarm eder
     def arm_disarm(self, arm, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
+
         if arm == 0 or arm == 1:
             self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, arm, 0, 0, 0, 0, 0, 0)
             if arm == 0:
                 print("Disarm edildi")
             if arm == 1:
                 print("ARM edildi")
-
         else:
             print(f"Gecersiz arm kodu: {arm}")
             exit()
 
     # Drona takeoff verir
-    def takeoff_mode(self, alt, mode: str, drone_id: int=None):
-        if drone_id is None:
-            drone_id = self.drone_id
-
-        self.set_mode(mode=mode, drone_id=drone_id)
-        self.arm_disarm(arm=True, drone_id=drone_id)
-        
-        self.vehicle.mav.command_long_send(
-            drone_id, self.vehicle.target_component,
-            mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, alt)
-
-        current_alt = self.get_pos(drone_id=drone_id)[2]
-        start_time = time.time()
-
-        while current_alt < alt * 0.95:
-            if time.time() - start_time > 1:
-                current_alt = self.get_pos(drone_id=drone_id)[2]
-                print(f"Anlık irtifa: {current_alt} metre")
-                start_time = time.time()
-
-        print(f"{alt} metreye yükseldi")
-
     def takeoff(self, alt, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
+
         self.vehicle.mav.command_long_send(
             drone_id, self.vehicle.target_component,
             mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, alt)
@@ -253,19 +218,20 @@ class Vehicle():
         current_alt = self.get_pos(drone_id=drone_id)[2]
         start_time = time.time()
 
-        print(f"Drone arm edildi ve modu: {self.get_mode(drone_id=drone_id)}\nTakeoff alınıyor...")
+        print(f"Takeoff alınıyor...")
         while current_alt < alt * 0.95:
+            current_alt = self.get_pos(drone_id=drone_id)[2]
             if time.time() - start_time > 2:
-                current_alt = self.get_pos(drone_id=drone_id)[2]
                 print(f"Anlık irtifa: {current_alt} metre")
                 start_time = time.time()
 
         print(f"{alt} metreye yükseldi")
 
+    # Dronun modunu belirler
     def set_mode(self, mode: str, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
-        mode_id = self.vehicle.mode_mapping()[mode]
+        
         if mode == "RTL":
             self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_NAV_RETURN_TO_LAUNCH, 0, 0, 0, 0, 0, 0, 0, 0)
 
@@ -273,47 +239,59 @@ class Vehicle():
             self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_MISSION_START, 0, 0, 0, 0, 0, 0, 0, 0)
 
         else:
+            mode_id = self.vehicle.mode_mapping()[mode]
             if mode not in self.vehicle.mode_mapping():
                 print("Mod değiştirilemedi gecersiz mod: ", mode)
                 exit()
             else:
                 self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mode_id, 0, 0, 0, 0, 0)
-                time.sleep(0.1)
-
-        start_time = time.time()
-        while self.get_mode(drone_id=drone_id) != mode and time.time() - start_time < 5:
-            if time.time() - start_time / 2 == 0:
-                print("Mod degistirme tekrar deneniyor...")
-
-            self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mode_id, 0, 0, 0, 0, 0)
 
         if self.get_mode(drone_id=drone_id) != mode:
-            print("Mod degistirilemedi")
+            print("Mod degistirilemedi: ", mode)
             exit()
-
         print(f"Mod {mode} yapıldı")
 
+    # Dronun arm durumunu kontrol eder
     def is_armed(self, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
-        return self.vehicle.sysid_state[drone_id].armed
 
-    def check_address(self, address):
-        if "udp" not in address:
+        start_time = time.time()
+        while True:
+            msg = self.vehicle.recv_match(type="HEARTBEAT", blocking=True)
+            if msg and msg.get_srcSystem() == drone_id:
+                if msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED:
+                    return 1
+                else:
+                    return 0
+            if time.time() - start_time > 5:
+                print("UYARI!!! 5 saniyedir arm durumu cekilmedi!!!")
+                break
+            
+    # Dronun baglanti yolunu kontrol eder
+    def check_address(self, address: str):
+        if "tcp" not in address:
             if not os.path.exists(address):
                 print("Dosya yolu yanlis yada yok:\n", address)
                 exit()
         print("Baglanti yolu onaylandi")
 
+    # Dronun modunu elde eder
     def get_mode(self, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
-        msg = self.vehicle.recv_match(type="HEARTBEAT", blocking=True)
-        if msg and msg.get_srcSystem() == drone_id:
-            return mavutil.mode_string_v10(msg)
-        return 0
+        
+        start_time = time.time()
+        while True:
+            msg = self.vehicle.recv_match(type="HEARTBEAT", blocking=True)
+            if msg and msg.get_srcSystem() == drone_id:
+                return mavutil.mode_string_v10(msg)
+            if time.time() - start_time > 5:
+                print("UYARI!!! 5 SANiYEDiR MOD BiLGiSi ALINAMADI!!!")
+                return None
 
-    def set_servo(self, drone_id: int=None, channel: int=9, pvm: int=1000):
+    # Dronun serbo pwm'ini ayarlar
+    def set_servo(self, drone_id: int=None, channel: int=9, pwm: int=1000):
         if drone_id is None:
             drone_id = self.drone_id
         self.vehicle.mav.command_long_send(
@@ -322,15 +300,33 @@ class Vehicle():
             mavutil.mavlink.MAV_CMD_DO_SET_SERVO,
             0,
             channel,
-            1750,
+            pwm,
             0, 0, 0, 0, 0)
 
+    def get_distance(self, loc1, loc2):
+        R = 6371000
+    
+        lat1, lon1 = loc1
+        lat2, lon2 = loc2
+
+        phi1 = math.radians(lat1)
+        phi2 = math.radians(lat2)
+        delta_phi = math.radians(lat2 - lat1)
+        delta_lambda = math.radians(lon2 - lon1)
+        
+        a = math.sin(delta_phi / 2.0) ** 2 + \
+            math.cos(phi1) * math.cos(phi2) * \
+            math.sin(delta_lambda / 2.0) ** 2
+        
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        
+        return R * c
 
     # Konumda oldugunu kontrol etme
-    def on_location(self, loc, seq, sapma: int=4, drone_id: int=None, check_seq: bool=True):
+    def on_location(self, loc, seq: int=0, sapma: int=4, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
-        if check_seq:
+        if seq != 0:
             if abs(self.get_pos(drone_id=drone_id)[0] - loc[0]) <= self.DEG/sapma and abs(self.get_pos(drone_id=drone_id)[1] - loc[1]) <= self.DEG/sapma and self.get_miss_wp(drone_id=drone_id) == seq:
                 return True
             return False
@@ -377,3 +373,5 @@ def calc_hipo_angle(screen_rat_x_y, x_y, alt, yaw, alt_met):
 
     #       metre       derece
     return hipo*alt/alt_met, (yaw + angle) % 360
+
+#TODO: fonksiyonlara bak bilgi cekenlerde while olayı koy get_mode de oldugu gibi

@@ -49,8 +49,8 @@ while True:
                 #! TODO: aldığın konumları drona anlık göndermenin yolunu bul !!!
                 with open("./konum.txt", "a") as loc_file:
                     loc_file.write(f"{x1},{x2},{y1},{y2}\n")
-
         start_time = time.time()
+
 
     cv2.imshow('YOLOv8 Canlı Tespit', frame)  # Görüntüyü göster
 
