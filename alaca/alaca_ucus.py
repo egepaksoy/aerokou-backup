@@ -18,8 +18,7 @@ try:
     vehicle.takeoff(alt=alt)
     takeoff_loc = vehicle.get_pos()
     vehicle.add_mission(seq=0, lat=lat, lon=lon, alt=alt)
-    vehicle.add_mission(seq=1, lat=lat, lon=lon, alt=alt)
-    scan_seq, scan_wp = vehicle.scan_area(seq=2, center_lat=lat, center_lon=lon, alt=alt, area_meter=area_meter, distance_meter=distance_meter)
+    scan_seq, scan_wp = vehicle.scan_area(seq=1, center_lat=lat, center_lon=lon, alt=alt, area_meter=area_meter, distance_meter=distance_meter)
     vehicle.set_mode(mode="AUTO")
 
     on_mission = True
