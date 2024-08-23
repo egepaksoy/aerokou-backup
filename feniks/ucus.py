@@ -1,6 +1,6 @@
 import time
 import sys
-sys.path.append('../pymavlink_custom')
+sys.path.append('./pymavlink_custom')
 from pymavlink_custom import Vehicle
 
 vehicle = Vehicle("tcp:127.0.0.1:5762")
