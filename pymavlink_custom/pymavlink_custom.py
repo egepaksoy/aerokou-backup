@@ -198,7 +198,7 @@ class Vehicle():
                         int(lat * 1e7), int(lon * 1e7), alt,
                         0, 0, 0, 0, 0, 0, 0, 0)
                     )
-    # TODO: TEKRAR BAK
+    
     # Drone'u belirtilen alana tarama yapacak şekilde waypointler ekler
     def scan_area(self, seq, center_lat, center_lon, alt, area_meter, distance_meter, drone_id: int=None):
         if drone_id is None:
@@ -209,7 +209,7 @@ class Vehicle():
         while i <= (area_meter / distance_meter):
             last_waypoint = (center_lat + (met + distance_meter * i) * self.DEG, center_lon + (met * sign) * self.DEG)
             last_seq = seq + i
-            self.add_mission(seq=seq + i, lat=center_lat + (met + distance_meter * i) * self.DEG, lon=center_lon + (met * sign) * self.DEG, alt=alt, drone_id=drone_id)
+            self.add_mission(seq=last_seq, lat=last_waypoint[0], lon=last_waypoint[1], alt=alt, drone_id=drone_id)
             sign *= -1
             i += 1
         
@@ -358,7 +358,6 @@ class Vehicle():
             if abs(self.get_pos(drone_id=drone_id)[0] - loc[0]) <= self.DEG/sapma and abs(self.get_pos(drone_id=drone_id)[1] - loc[1]) <= self.DEG/sapma:
                 return True
             return False
-
 
 # Kameradan goruntu hesaplama kodu
 def calc_hipo_angle(screen_rat_x_y, x_y, alt, yaw, alt_met):

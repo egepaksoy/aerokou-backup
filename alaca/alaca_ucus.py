@@ -9,8 +9,8 @@ lat, lon = -35.36312501, 149.16520965
 lat2, lon2 = -35.36317809, 149.16518145
 alt = 5
 top_birakma_alt = 2
-distance_meter = 1
-area_meter = 10
+distance_meter = 2
+area_meter = 5
 
 try:
     start_time = time.time()
