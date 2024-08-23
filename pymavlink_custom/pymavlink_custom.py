@@ -106,7 +106,6 @@ class Vehicle():
                 return int(message.seq)
             print("Waypoint mesaji bekleniyor...")
 
-    # TODO: TEST ET
     # Yaw acisini derece cinsinden dondurur
     def get_yaw(self, drone_id: int=None):
         if drone_id is None:
@@ -117,7 +116,7 @@ class Vehicle():
             if message and message.get_srcSystem() == drone_id:
                 yaw_deg = math.degrees(message.yaw)
                 if yaw_deg < 0:
-                    yaw_deg += 360
+                    yaw_deg += 360.0
                 return yaw_deg
             print("Yaw acisi cekiliyor...")
 
@@ -143,7 +142,7 @@ class Vehicle():
             self.vehicle.mav.waypoint_clear_all_send(drone_id, self.vehicle.target_component)
         print(f"{drone_id} idli drone'nun waypointleri silindi")
 
-    # TODO: TEK WP EKLEYEN VERSIYONUNA BAK
+    # TODO: TEK WP EKLEYEN VERSIYONUNA BAK + WAYPOINT EKLERKEN SON EKLENENI CURRENT YAPIYOR ONU DUZELT
     # Tım waypointleri cekerek ger yeni waypoint gonderildiginde hepsini tekrar gonderir
     def add_mission(self, seq, lat, lon, alt, drone_id: int=None):
         if drone_id is None:
@@ -162,6 +161,31 @@ class Vehicle():
             if msg.get_srcSystem() == drone_id and msg:
                 self.vehicle.mav.send(self.wp.wp(msg.seq))
                 print("Sending waypoints {0}".format(msg.seq))
+
+    # Liste şeklinde gönderilen waypointleri ekler
+    def add_mission_list(self, wp_list: list, drone_id: int=None):
+        if drone_id is None:
+            drone_id = self.drone_id
+
+        self.clear_wp_target(drone_id=drone_id)
+        self.vehicle.waypoint_count_send(len(wp_list))
+
+        seq = 0
+        for waypoint in wp_list:
+            self.wp.add(mavutil.mavlink.MAVLink_mission_item_message(drone_id, self.vehicle.target_component, seq, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, mavutil.mavlink.MAV_CMD_NAV_WAYPOINT, 0, 0, 0, 0, 0, 0, waypoint[0], waypoint[1], waypoint[2]))
+            seq += 1
+
+        for i in range(self.wp.count()):
+            msg = self.vehicle.recv_match(type=["MISSION_REQUEST"], blocking=True)
+            if msg.get_srcSystem() == drone_id and msg:
+                self.vehicle.mav.send(self.wp.wp(msg.seq))
+                print("Sending waypoints {0}".format(msg.seq))
+        
+        self.vehicle.mav.mission_set_current_send(
+            drone_id,
+            self.vehicle.target_component,
+            0
+        )
 
     # TODO: HIZ AYARLAMASINA BAK
     # Dronu guided modunda hareket ettirir
@@ -247,7 +271,7 @@ class Vehicle():
                 self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mode_id, 0, 0, 0, 0, 0)
 
         if self.get_mode(drone_id=drone_id) != mode:
-            print("Mod degistirilemedi: ", mode)
+            print(f"Mod {mode} yapilamadi: ", self.get_mode(drone_id=drone_id))
             exit()
         print(f"Mod {mode} yapıldı")
 

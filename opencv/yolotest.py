@@ -3,12 +3,13 @@ import time
 import cv2
 import numpy
 import sys
+sys.path.append("../pymavlink_custom")
+from pymavlink import calc_hipo_angle
 from ultralytics import YOLO
-from konumual import *
 import os
 
-model = YOLO('best-son.pt')
-cap = cv2.VideoCapture("./output.mp4")
+model = YOLO('../korfez/models/kullanilcak.pt')
+cap = cv2.VideoCapture(0)
 
 try:
     start_time = time.time()
