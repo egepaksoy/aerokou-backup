@@ -23,8 +23,8 @@ class Vehicle():
                     self.drone_ids.append(d_id)
 
             if len(self.drone_ids) == 1:
-                self.drone_id = list(drone_idler)[0]
                 print(f"Ucusta tek drone var ve id'si: {self.drone_id}")
+                self.drone_id = list(drone_idler)[0]
             else:
                 print("Ucustaki drone idleri: ", self.drone_ids)
 
@@ -93,7 +93,7 @@ class Vehicle():
                 lon = message.lon / 1e7
                 alt = message.relative_alt / 1e3
                 return lat, lon, alt
-            # print(f"Drone {drone_id} Konum bekleniyor...")
+            print("Konum bekleniyor...")
 
     # Anlık waypoint'i döndürür
     def get_miss_wp(self, drone_id: int=None):
@@ -216,15 +216,12 @@ class Vehicle():
         return last_seq, last_waypoint
 
     # Drone'u arm eder veya disarm eder
-    def arm_disarm(self, arm, drone_id: int=None, force_arm: bool=False):
+    def arm_disarm(self, arm, drone_id: int=None):
         if drone_id is None:
             drone_id = self.drone_id
 
         if arm == 0 or arm == 1:
-            if force_arm:
-                self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, arm, 0, 21196, 0, 0, 0, 0)
-            else:
-                self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, arm, 0, 0, 0, 0, 0, 0)
+            self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 0, arm, 0, 0, 0, 0, 0, 0)
             if arm == 0:
                 print("Disarm edildi")
             if arm == 1:
@@ -242,9 +239,7 @@ class Vehicle():
             drone_id, self.vehicle.target_component,
             mavutil.mavlink.MAV_CMD_NAV_TAKEOFF, 0, 0, 0, 0, 0, 0, 0, alt)
         
-        print("Takeoff mesaji gonderildi")
-        
-        current_alt = 0
+        current_alt = self.get_pos(drone_id=drone_id)[2]
         start_time = time.time()
 
         print(f"Takeoff alınıyor...")
@@ -253,7 +248,7 @@ class Vehicle():
             if time.time() - start_time > 2:
                 print(f"Anlık irtifa: {current_alt} metre")
                 start_time = time.time()
-        
+
         print(f"{alt} metreye yükseldi")
 
     # Dronun modunu belirler
@@ -275,9 +270,8 @@ class Vehicle():
             else:
                 self.vehicle.mav.command_long_send(drone_id, self.vehicle.target_component, mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0, mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED, mode_id, 0, 0, 0, 0, 0)
 
-        current_mode = self.get_mode(drone_id=drone_id)
-        if current_mode != mode:
-            self.set_mode(mode=mode, drone_id=drone_id)
+        if self.get_mode(drone_id=drone_id) != mode:
+            print(f"Mod {mode} yapilamadi: ", self.get_mode(drone_id=drone_id))
 
         else:
             print(f"Mod {mode} yapıldı")
