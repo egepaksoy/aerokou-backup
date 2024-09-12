@@ -11,7 +11,7 @@ ALT = 3
 
 try:
     for drone_id in vehicle.drone_ids:
-        vehicle.arm_disarm(arm=True, drone_id=drone_id, force_arm=True)
+        vehicle.arm_disarm(arm=True, drone_id=drone_id)
         vehicle.takeoff(alt=ALT, drone_id=drone_id)
         print(f"{drone_id} kalkış yaptı")
 
