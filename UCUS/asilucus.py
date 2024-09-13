@@ -6,10 +6,6 @@ from pymavlink_custom import Vehicle
 
 def alaca_miss(vehicle, alaca_takeoff_pos, drone_id: int=None):
     global running
-    global alaca_scan_positions
-    global alaca_pos
-    global alaca_top_birakma_alt
-    global alaca_takeoff_pos
 
     vehicle.set_mode(mode="AUTO", drone_id=drone_id)
     print("Alaca taramaya başlıyor...")
@@ -20,7 +16,7 @@ def alaca_miss(vehicle, alaca_takeoff_pos, drone_id: int=None):
             print("Alaca taramaya devam ediyor...")
             start_time = time.time()
         
-        if vehicle.on_location(loc=alaca_scan_positions[len(alaca_scan_positions) - 1], seq=len(alaca_scan_positions), sapma=1, drone_id=drone_id):
+        if vehicle.get_miss_wp(drone_id=drone_id) == len(alaca_scan_positions):
             break
     
     if running == False:
@@ -78,9 +74,6 @@ def alaca_miss(vehicle, alaca_takeoff_pos, drone_id: int=None):
 
 def feniks_miss(vehicle, feniks_takeoff_pos, drone_id: int=None):
     global running
-    global feniks_pos
-    global feniks_top_birakma_alt
-    global feniks_takeoff_pos
 
     vehicle.set_mode(mode="AUTO", drone_id=drone_id)
     print("Feniks uçuşa başlıyor...")
@@ -197,13 +190,14 @@ try:
     while True and running:
         if time.time() - start_time > 2:
             print("Görev devam ediyor")
+            print("wp: ", vehicle.get_miss_wp(drone_id=korfez_id))
+            print("mode: ", vehicle.get_mode(drone_id=korfez_id))
             start_time = time.time()
         
         if vehicle.get_miss_wp(drone_id=korfez_id) == len(korfez_missions1):
             print("Körfez taramasını tamamladı")
             print("Izlemeye geciyor...")
             break
-
 
     # #################### ALACA #####################
     vehicle.set_mode(mode="GUIDED", drone_id=alaca_id)
