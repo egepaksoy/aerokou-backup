@@ -16,7 +16,7 @@ def alaca_miss(vehicle, alaca_takeoff_pos, drone_id: int=None):
             print("Alaca taramaya devam ediyor...")
             start_time = time.time()
         
-        if vehicle.on_location(loc=alaca_scan_values[1], seq=alaca_scan_values[0], sapma=1, drone_id=drone_id):
+        if vehicle.on_location(loc=alaca_scan_positions[len(alaca_scan_positions) - 1], seq=len(alaca_scan_positions), sapma=1, drone_id=drone_id):
             break
     
     if running == False:
@@ -170,11 +170,15 @@ feniks_top_birakma_alt = 4
 try:
     print("Uçuş başlıyor")
     
+    '''
+    korfez_missions = [[korfez_pos[0], korfez_pos[1], korfez_alt]]
+    korfez_missions1 = vehicle.scan_area_wpler(center_lat=korfez_pos[0], center_lon=korfez_pos[1], alt=korfez_alt, area_meter=korfez_scan_meter1, distance_meter=korfez_distance_meter1)
+    korfez_missions2 = vehicle.scan_area_wpler(center_lat=korfez_pos[0], center_lon=korfez_pos[1], alt=korfez_alt, area_meter=korfez_scan_meter2, distance_meter=korfez_distance_meter2)
+    korfez_missions += korfez_missions1 + korfez_missions2
+    vehicle.send_all_waypoints(wp_list=korfez_missions, drone_id=korfez_id)
+    '''
 
-
-    print("Dronlara waypointler atıldı")
-
-
+    vehicle.set_mode(mode="GUIDED", drone_id=korfez_id)
     vehicle.arm_disarm(arm=True, drone_id=korfez_id)
     vehicle.set_mode(mode="AUTO", drone_id=korfez_id)
     korfez_takeoff_pos = vehicle.get_pos(drone_id=korfez_id)
@@ -182,12 +186,14 @@ try:
     print("Körfez kalkış yaptı: ", korfez_takeoff_pos)
 
     start_time = time.time()
+    mission_time = time.time()
     while True and running:
         if time.time() - start_time > 2:
             print("Görev devam ediyor")
             start_time = time.time()
         
-        if vehicle.get_miss_wp(drone_id=korfez_id) == korfez_scan_values1[0]:
+        #if vehicle.get_miss_wp(drone_id=korfez_id) == korfez_scan_values1[0]:
+        if time.time() - mission_time > 8:
             print("Körfez taramasını tamamladı")
             print("Izlemeye geciyor...")
             break
@@ -205,8 +211,9 @@ try:
     
     print("Alaca görevler atılıyor...")
     # ALACA WAYPOINTLER
-    vehicle.add_mission(seq=0, lat=alaca_pos[0], lon=alaca_pos[1], alt=alaca_alt, drone_id=alaca_id)
-    alaca_scan_values = vehicle.scan_area(seq=1, center_lat=alaca_pos[0], center_lon=alaca_pos[1], alt=alaca_alt, area_meter=alaca_scan_meter, distance_meter=alaca_distance_meter, drone_id=alaca_id)
+    alaca_scan_positions = [alaca_pos[0], alaca_pos[1], alaca_alt]
+    alaca_scan_positions += vehicle.scan_area_wpler(center_lat=alaca_pos[0], center_lon=alaca_pos[1], alt=alaca_alt, area_meter=alaca_scan_meter, distance_meter=alaca_distance_meter)
+    vehicle.send_all_waypoints(wp_list=alaca_scan_positions, drone_id=alaca_id)
     print("Alaca'nın görevleri atıldı uçuş başlıyor...")
     alaca_miss_thread.start()
 
@@ -219,8 +226,8 @@ try:
 
     print("Feniks görevler atılıyor...")
     # FENIKS WAYPOINTLER
-    vehicle.add_mission(seq=0, lat=feniks_pos[0], lon=feniks_pos[1], alt=feniks_alt, drone_id=feniks_id)
-    vehicle.add_mission(seq=1, lat=feniks_pos[0], lon=feniks_pos[1], alt=feniks_alt, drone_id=feniks_id)
+    feniks_wpler = [[feniks_pos[0], feniks_pos[1], feniks_alt], [feniks_pos[0], feniks_pos[1], feniks_alt]]
+    vehicle.send_all_waypoints(wp_list=feniks_wpler, drone_id=feniks_id)
     print("Feniks'in gorevleri atıldı ucus baslıyor...")
     feniks_miss_thread.start()
 
