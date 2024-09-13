@@ -200,8 +200,8 @@ try:
             break
 
     # #################### ALACA #####################
-    vehicle.set_mode(mode="GUIDED", drone_id=alaca_id)
     print("Alaca kalkışa geçti")
+    vehicle.set_mode(mode="GUIDED", drone_id=alaca_id)
     vehicle.arm_disarm(arm=True, drone_id=alaca_id)
     vehicle.takeoff(alt=alaca_alt, drone_id=alaca_id)
     alaca_takeoff_pos = vehicle.get_pos(drone_id=alaca_id)
@@ -217,8 +217,8 @@ try:
     alaca_miss_thread.start()
 
     # #################### FENIKS #####################
-    vehicle.set_mode(mode="GUIDED", drone_id=feniks_id)
     print("Feniks kalkışa geçti")
+    vehicle.set_mode(mode="GUIDED", drone_id=feniks_id)
     vehicle.arm_disarm(arm=True, drone_id=feniks_id)
     vehicle.takeoff(alt=feniks_alt, drone_id=feniks_id)
     feniks_takeoff_pos = vehicle.get_pos(drone_id=feniks_id)
