@@ -6,6 +6,10 @@ from pymavlink_custom import Vehicle
 
 def alaca_miss(vehicle, alaca_takeoff_pos, drone_id: int=None):
     global running
+    global alaca_scan_positions
+    global alaca_pos
+    global alaca_top_birakma_alt
+    global alaca_takeoff_pos
 
     vehicle.set_mode(mode="AUTO", drone_id=drone_id)
     print("Alaca taramaya başlıyor...")
@@ -74,6 +78,9 @@ def alaca_miss(vehicle, alaca_takeoff_pos, drone_id: int=None):
 
 def feniks_miss(vehicle, feniks_takeoff_pos, drone_id: int=None):
     global running
+    global feniks_pos
+    global feniks_top_birakma_alt
+    global feniks_takeoff_pos
 
     vehicle.set_mode(mode="AUTO", drone_id=drone_id)
     print("Feniks uçuşa başlıyor...")
@@ -156,13 +163,13 @@ korfez_distance_meter1 = 1
 alaca_scan_meter = 5
 alaca_distance_meter = 1
 
-korfez_pos = (40.7119738, 30.0245555)
+korfez_pos = (40.7119922, 30.0245655)
 feniks_pos = korfez_pos
 alaca_pos = (korfez_pos[0] + vehicle.DEG * 1.5, korfez_pos[1])
 
-korfez_alt = 8
+korfez_alt = 10
 feniks_alt = 4
-alaca_alt = 6
+alaca_alt = 7
 
 alaca_top_birakma_alt = 4
 feniks_top_birakma_alt = 3
