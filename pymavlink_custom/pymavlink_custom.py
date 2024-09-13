@@ -254,12 +254,49 @@ class Vehicle():
                     )
                 )
 
-            # Tüm waypoint'leri gönder
             for i in range(self.wp.count()):
-                msg = self.vehicle.recv_match(type=["MISSION_REQUEST"], blocking=True)
-                if msg.get_srcSystem() == drone_id and msg:
-                    self.vehicle.mav.send(self.wp.wp(msg.seq))
-                    print(f"Drone {drone_id}, Waypoint {msg.seq} gönderildi")
+                self.vehicle.mav.send(self.wp.wp(i))
+                print(f"Drone {drone_id}, Waypoint {i} gönderildi")
+
+            # İlk waypoint'i aktif yap
+            self.vehicle.mav.mission_set_current_send(drone_id, self.vehicle.target_component, 0)
+
+            print(f"Drone {drone_id}, {len(wp_list)} waypoint başarıyla gönderildi")
+        except Exception as e:
+            print(f"Waypoint gönderme sırasında hata oluştu: {e}")
+    
+    def send_all_waypoints_git(self, wp_list: list, drone_id: int = None):
+        if drone_id is None:
+            drone_id = self.drone_id
+        
+        wpler = []
+
+        try:
+            # Tüm waypoint'leri temizle
+            self.clear_wp_target(drone_id=drone_id)
+
+            # Waypoint sayısını bildir
+            self.vehicle.mav.mission_count_send(drone_id, self.vehicle.target_component, len(wp_list))
+
+            # Tüm waypoint'leri mavlink mesajı olarak ekle
+            for seq, waypoint in enumerate(wp_list):
+                wpler.append(
+                    mavutil.mavlink.MAVLink_mission_item_int_message(
+                        drone_id,
+                        self.vehicle.target_component,
+                        seq,
+                        mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT,
+                        mavutil.mavlink.MAV_CMD_NAV_WAYPOINT,
+                        0, 1, 0, 0, 0, 0,
+                        int(waypoint[0] * 1e7),  # Latitude
+                        int(waypoint[1] * 1e7),  # Longitude
+                        waypoint[2]  # Altitude
+                    )
+                )
+
+            for i, wp in enumerate(wpler):
+                self.vehicle.mav.send(wp)
+                print(f"Drone {drone_id}, Waypoint {i} gönderildi")
 
             # İlk waypoint'i aktif yap
             self.vehicle.mav.mission_set_current_send(drone_id, self.vehicle.target_component, 0)
