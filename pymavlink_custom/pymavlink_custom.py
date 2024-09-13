@@ -221,7 +221,9 @@ class Vehicle():
                 if msg.get_srcSystem() == drone_id and msg:
                     self.vehicle.mav.send(self.wp.wp(msg.seq))
                     print("Sending waypoints {0}".format(msg.seq))
+        
         except Exception as e:
+            print(e)
             return e
 
     # Liste şeklinde gönderilen waypointleri ekler
