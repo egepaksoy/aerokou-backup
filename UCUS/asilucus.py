@@ -16,7 +16,7 @@ def alaca_miss(vehicle, alaca_takeoff_pos, drone_id: int=None):
             print("Alaca taramaya devam ediyor...")
             start_time = time.time()
         
-        if vehicle.get_miss_wp(drone_id=drone_id) == len(alaca_scan_positions):
+        if vehicle.get_miss_wp(drone_id=drone_id) == len(alaca_scan_positions) - 1:
             break
     
     if running == False:
@@ -201,6 +201,7 @@ try:
 
     # #################### ALACA #####################
     vehicle.set_mode(mode="GUIDED", drone_id=alaca_id)
+    print("Alaca kalkışa geçti")
     vehicle.arm_disarm(arm=True, drone_id=alaca_id)
     vehicle.takeoff(alt=alaca_alt, drone_id=alaca_id)
     alaca_takeoff_pos = vehicle.get_pos(drone_id=alaca_id)
@@ -217,6 +218,7 @@ try:
 
     # #################### FENIKS #####################
     vehicle.set_mode(mode="GUIDED", drone_id=feniks_id)
+    print("Feniks kalkışa geçti")
     vehicle.arm_disarm(arm=True, drone_id=feniks_id)
     vehicle.takeoff(alt=feniks_alt, drone_id=feniks_id)
     feniks_takeoff_pos = vehicle.get_pos(drone_id=feniks_id)
