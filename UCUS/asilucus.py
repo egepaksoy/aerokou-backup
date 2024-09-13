@@ -150,40 +150,40 @@ if len(vehicle.drone_ids) != 3:
 
 korfez_scan_meter2 = 10
 korfez_distance_meter2 = 2
-korfez_scan_meter = 5
-korfez_distance_meter = 1
+korfez_scan_meter1 = 5
+korfez_distance_meter1 = 1
 
 alaca_scan_meter = 5
 alaca_distance_meter = 1
 
-korfez_pos = (40.7121177, 30.0245516)
+korfez_pos = (40.7119738, 30.0245555)
 feniks_pos = korfez_pos
 alaca_pos = (korfez_pos[0] + vehicle.DEG * 1.5, korfez_pos[1])
 
-korfez_alt = 11
-feniks_alt = 6
-alaca_alt = 8
+korfez_alt = 8
+feniks_alt = 4
+alaca_alt = 6
 
-alaca_top_birakma_alt = 5
-feniks_top_birakma_alt = 4
+alaca_top_birakma_alt = 4
+feniks_top_birakma_alt = 3
 
 try:
     print("Uçuş başlıyor")
     
-    '''
     korfez_missions = [[korfez_pos[0], korfez_pos[1], korfez_alt]]
     korfez_missions1 = vehicle.scan_area_wpler(center_lat=korfez_pos[0], center_lon=korfez_pos[1], alt=korfez_alt, area_meter=korfez_scan_meter1, distance_meter=korfez_distance_meter1)
     korfez_missions2 = vehicle.scan_area_wpler(center_lat=korfez_pos[0], center_lon=korfez_pos[1], alt=korfez_alt, area_meter=korfez_scan_meter2, distance_meter=korfez_distance_meter2)
     korfez_missions += korfez_missions1 + korfez_missions2
     vehicle.send_all_waypoints(wp_list=korfez_missions, drone_id=korfez_id)
-    '''
+    print("Korfez waypointleri atıldı")
 
     vehicle.set_mode(mode="GUIDED", drone_id=korfez_id)
     vehicle.arm_disarm(arm=True, drone_id=korfez_id)
-    vehicle.set_mode(mode="AUTO", drone_id=korfez_id)
+    vehicle.takeoff(alt=korfez_alt, drone_id=korfez_id)
     korfez_takeoff_pos = vehicle.get_pos(drone_id=korfez_id)
+    print("Körfez kalkış pozisyonu: ", korfez_takeoff_pos)
 
-    print("Körfez kalkış yaptı: ", korfez_takeoff_pos)
+    vehicle.set_mode(mode="AUTO", drone_id=korfez_id)
 
     start_time = time.time()
     mission_time = time.time()
@@ -192,15 +192,11 @@ try:
             print("Görev devam ediyor")
             start_time = time.time()
         
-        #if vehicle.get_miss_wp(drone_id=korfez_id) == korfez_scan_values1[0]:
-        if time.time() - mission_time > 8:
+        if vehicle.get_miss_wp(drone_id=korfez_id) == len(korfez_missions1):
             print("Körfez taramasını tamamladı")
             print("Izlemeye geciyor...")
             break
 
-    # GOREVLER
-    feniks_miss_thread = threading.Thread(target=feniks_miss, args=(vehicle, feniks_takeoff_pos, feniks_id))
-    alaca_miss_thread = threading.Thread(target=alaca_miss, args=(vehicle, alaca_takeoff_pos, alaca_id))
 
     # #################### ALACA #####################
     vehicle.set_mode(mode="GUIDED", drone_id=alaca_id)
@@ -211,10 +207,11 @@ try:
     
     print("Alaca görevler atılıyor...")
     # ALACA WAYPOINTLER
-    alaca_scan_positions = [alaca_pos[0], alaca_pos[1], alaca_alt]
+    alaca_scan_positions = [[alaca_pos[0], alaca_pos[1], alaca_alt]]
     alaca_scan_positions += vehicle.scan_area_wpler(center_lat=alaca_pos[0], center_lon=alaca_pos[1], alt=alaca_alt, area_meter=alaca_scan_meter, distance_meter=alaca_distance_meter)
     vehicle.send_all_waypoints(wp_list=alaca_scan_positions, drone_id=alaca_id)
     print("Alaca'nın görevleri atıldı uçuş başlıyor...")
+    alaca_miss_thread = threading.Thread(target=alaca_miss, args=(vehicle, alaca_takeoff_pos, alaca_id))
     alaca_miss_thread.start()
 
     # #################### FENIKS #####################
@@ -229,10 +226,11 @@ try:
     feniks_wpler = [[feniks_pos[0], feniks_pos[1], feniks_alt], [feniks_pos[0], feniks_pos[1], feniks_alt]]
     vehicle.send_all_waypoints(wp_list=feniks_wpler, drone_id=feniks_id)
     print("Feniks'in gorevleri atıldı ucus baslıyor...")
+    feniks_miss_thread = threading.Thread(target=feniks_miss, args=(vehicle, feniks_takeoff_pos, feniks_id))
     feniks_miss_thread.start()
 
     while True:
-        if vehicle.on_location(loc=korfez_scan_values2[1], seq=korfez_scan_values2[0], sapma=1, drone_id=korfez_id) or vehicle.get_miss_wp(drone_id=korfez_id) == korfez_scan_values2[0]:
+        if vehicle.get_miss_wp(drone_id=korfez_id) == len(korfez_missions1) + len(korfez_missions2) - 1:
             print("Körfez taramasını tamamladı dönüş yapıyor...")
             vehicle.set_mode(mode="GUIDED", drone_id=korfez_id)
 
