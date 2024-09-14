@@ -32,6 +32,21 @@ def start_server(host, port, result_q):
                 continue
 
 
+def failsafe_drone_id(vehicle, drone_id):
+    print(f"Drone {drone_id}, Failsafe alıyor")
+    vehicle.set_mode(mode="RTL", drone_id=drone_id)
+
+def failsafe(vehicle):
+    thraeds = []
+    for d_id in vehicle.drone_ids:
+        thraeds.append(threading.Thread(target=failsafe_drone_id, args=(vehicle, d_id)))
+        thraeds[-1].start()
+
+    for t in thraeds:
+        t.join()
+
+    print(f"Dronlar {vehicle.drone_ids} Failsafe aldi")
+
 if len(sys.argv) != 2:
     print("Bağlantı yok")
     exit()
@@ -40,131 +55,103 @@ vehicle = Vehicle(sys.argv[1])
 
 tarama_pos = (-35.36305704, 149.16518240)
 ates_pos = []
+
 alt = 6
 top_birakma_alt = 4
-drone_id = 3
+
+drone_id = 1
+
 area_meter = 5
 distance_meter = 1
 
 running = True
 
-result_q = queue.Queue()
-server_thread = threading.Thread(target=start_server, args=("0.0.0.0", 9000, result_q))
-
 try:
-    server_thread.start()
+    result_q = queue.Queue()
+    server_thread = threading.Thread(target=start_server, args=("0.0.0.0", 9000, result_q))
+
     waypoints = [[tarama_pos[0], tarama_pos[1], alt]]
     waypoints += vehicle.scan_area_wpler(center_lat=tarama_pos[0], center_lon=tarama_pos[1], alt=alt, area_meter=area_meter, distance_meter=distance_meter)
     vehicle.send_all_waypoints(wp_list=waypoints, drone_id=drone_id)
-    
-    #! DRONE TAKEOFF YAPARKEN HATA OLDU
+
     vehicle.set_mode(mode="GUIDED", drone_id=drone_id)
     vehicle.arm_disarm(arm=True, drone_id=drone_id)
     vehicle.takeoff(alt=alt, drone_id=drone_id)
     takeoff_pos = vehicle.get_pos(drone_id=drone_id)
-    print("Drone takeoff yaptı")
-    vehicle.set_mode(mode="AUTO", drone_id=drone_id)
-    print("Tarama başladı")
+    print("Drone takeoff aldı: ", takeoff_pos)
 
+    vehicle.set_mode(mode="AUTO", drone_id=drone_id)
+    
     start_time = time.time()
+    mode = vehicle.get_mode(drone_id=drone_id)
     while True:
+        current_mode = vehicle.get_mode(drone_id=drone_id)
         if time.time() - start_time > 2:
             print("Tarama devam ediyor...")
             print("wp: ", vehicle.get_miss_wp(drone_id=drone_id))
             print("mode: ", vehicle.get_mode(drone_id=drone_id))
             start_time = time.time()
+        
+        if mode != current_mode:
+            print(f"!!!! UYARI MOD DEGISTI: {mode}->{current_mode}")
+            mode = current_mode
         
         if server_thread.is_alive() == False:
             drone_pos = vehicle.get_pos(drone_id=drone_id)
             uzaklik, aci = calc_hipo_angle(screen_rat_x_y=(32, 24), x_y=(result_q.get()), alt=float(drone_pos[2]), yaw=float(vehicle.get_yaw(drone_id=drone_id)), alt_met=32)
             ates_pos = calc_location(uzaklik=uzaklik, aci=aci, lat=float(drone_pos[0]), lon=float(drone_pos[1]))
             print("ateş bulundu: ", ates_pos)
-            break
 
         if vehicle.on_location(loc=waypoints[len(waypoints) - 1], seq=len(waypoints) - 1, sapma=1, drone_id=drone_id):
-            if len(ates_pos) == 0:
+            if ateş_pos:
+                print("Tarama bitti ateşe gidiliyor...")
+                break
+
+            else:
                 print("Tarama bitti ateş bulunamadı rtl alınıyor")
-                vehicle.set_mode(mode="RTL", drone_id=drone_id)
+                failsafe(vehicle)
                 exit()
-            
-            print("Tarama bitti ateşe gidiliyor...")
-            break
-    
-    while True:
-        if time.time() - start_time > 2:
-            print("Tarama devam ediyor...")
-            print("wp: ", vehicle.get_miss_wp(drone_id=drone_id))
-            print("mode: ", vehicle.get_mode(drone_id=drone_id))
-            start_time = time.time()
-        
-        if vehicle.on_location(loc=waypoints[len(waypoints) - 1], seq=len(waypoints) - 1, sapma=1, drone_id=drone_id):
-            if len(ates_pos) == 0:
-                print("Tarama bitti ateş bulunamadı rtl alınıyor")
-                vehicle.set_mode(mode="RTL", drone_id=drone_id)
-                exit()
-            
-            print("Tarama bitti ateşe gidiliyor...")
-            break
     
     vehicle.set_mode(mode="GUIDED", drone_id=drone_id)
-    vehicle.go_to(lat=ates_pos[0], lon=ates_pos[1], alt=alt, drone_id=drone_id)
-    print("Ateşe gidiliyor...")
+    vehicle.go_to(ates_pos[0], ates_pos[1], alt, drone_id=drone_id)
 
-    start_time = time.time()
-    while True:
-        if time.time() - start_time > 2:
-            print("Gidiliyor...")
-            print("mode: ", vehicle.get_mode(drone_id=drone_id))
-        
-        if vehicle.on_location(loc=ates_pos, seq=0, sapma=1, drone_id=drone_id):
-            print("Ateşe gelindi alçalıyor...")
-            vehicle.go_to(lat=ates_pos[0], lon=ates_pos[1], alt=top_birakma_alt, drone_id=drone_id)
-            break
-
-    while vehicle.get_pos(drone_id=drone_id)[2] >= top_birakma_alt * 1.1:
+    while vehicle.on_location(loc=ates_pos, seq=0, sapma=1, drone_id=drone_id) == False:
         continue
 
-    print("Top bırakılıyor")
+    print("Ateşe ulaşıldı")
+    vehicle.go_to(ates_pos[0], ates_pos[1], top_birakma_alt, drone_id=drone_id)
+    print("Top bırakma noktasına gidiliyor")
 
+    while vehicle.get_pos(drone_id=drone_id)[2] > top_birakma_alt * 1.1:
+        continue
+
+    print("Top bırakılıyor...")
     vehicle.set_servo(channel=9, pwm=1000, drone_id=drone_id)
     time.sleep(1.5)
     vehicle.set_servo(channel=9, pwm=1750, drone_id=drone_id)
     time.sleep(1.5)
     vehicle.set_servo(channel=9, pwm=0, drone_id=drone_id)
 
-    print("Toplar bırakıldı dönülüyor...")
+    print("Top bırakıldı dönülüyor...")
+    vehicle.go_to(ates_pos[0], ates_pos[1], alt, drone_id=drone_id)
 
-    vehicle.go_to(lat=ates_pos[0], lon=ates_pos[1], alt=alt, drone_id=drone_id)
-
-    while vehicle.get_pos(drone_id=drone_id)[2] <= alt * 0.9:
+    while vehicle.get_pos(drone_id=drone_id)[2] < alt * 0.9:
         continue
 
     vehicle.go_to(lat=takeoff_pos[0], lon=takeoff_pos[1], alt=alt, drone_id=drone_id)
+    print("Dönülüyor...")
 
-    start_time = time.time()
-    while True:
-        if time.time() - start_time > 2:
-            print("Dönülüyor...")
-            start_time = time.time()
+    while vehicle.on_location(loc=takeoff_pos, seq=0, sapma=1, drone_id=drone_id) == False:
+        continue
 
-        if vehicle.on_location(loc=takeoff_pos, seq=0, sapma=1, drone_id=drone_id):
-            print("Konuma dönüldü")
-            break
-    
+    print("Dönüldü")
     vehicle.set_mode(mode="LAND", drone_id=drone_id)
-    print("Land alındı görev bitti")
 
 
 except KeyboardInterrupt:
-    print("Koddan Çıkıldı")
-    for d_id in vehicle.drone_ids:
-        vehicle.set_mode(mode="RTL", drone_id=d_id)
+    failsafe(vehicle)
+    print("Kod kapatıldı")
 
 except Exception as e:
-    print("Hata: ", e)
-    for d_id in vehicle.drone_ids:
-        vehicle.set_mode(mode="RTL", drone_id=d_id)
-
-finally:
-    running = False
-    print("Kod bitti")
+    failsafe(vehicle)
+    print(f"Error: {e}")

@@ -19,6 +19,8 @@ def main():
 
         if t_min / 100 > 15 and t_min / 100 < 120:
             return False
+        if t_max / 100 > 400 and t_max / 100 < 15:
+            return True
         return True
 
     # MCU'dan sıcaklık alma işlevi (Santigrat derece x 100)
@@ -58,10 +60,10 @@ def main():
         while y < len(temp):
             x = 0
             while x < len(temp[y]):
-                if int(temp[y][x]) > 5500:
+                if int(temp[y][x]) > 5500 and bozuk(T_array) == False:
                         new_maxt = int(temp[y][x])
                         new_maxt_index = [y,x]
-                if int(temp[y][x]) > maxt:
+                if int(temp[y][x]) > maxt and bozuk(T_array) == False:
                     maxt = int(temp[y][x])
                 x += 1
             y += 1
@@ -129,6 +131,7 @@ def main():
                     print("Bozuldu tekrardan açılıyor...")
                     ser = serial.Serial ('/dev/serial0')
                     ser.baudrate = 115200
+                    continue
 
             if Ta == 1:
                     break
