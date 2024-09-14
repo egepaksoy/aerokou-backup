@@ -1,4 +1,5 @@
 import socket
+import sys
 
 def send_message(host, port, message):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as client_socket:
@@ -7,4 +8,4 @@ def send_message(host, port, message):
         print(f"Gonderildi: {response.decode()}")
 
 if __name__ == "__main__":
-    send_message("172.16.13.28", 65432, 'Merhaba Dünya')  # Hedef IP ve port
+    send_message(sys.argv[1], int(sys.argv[2]), sys.argv[3])  # Hedef IP ve port

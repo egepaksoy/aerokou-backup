@@ -569,4 +569,10 @@ def calc_hipo_angle(screen_rat_x_y, x_y, alt, yaw, alt_met):
     #       metre       derece
     return hipo*alt/alt_met, (yaw + angle) % 360
 
+def calc_location(uzaklik, aci, lat, lon):
+    DEG = 0.00001172485
+    
+    ates_pos = [uzaklik*math.sin(math.radians(aci)), uzaklik*math.cos(math.radians(aci))]
+    return lat + ates_pos[0] * DEG, lon + ates_pos[1] * DEG
+
 #TODO: fonksiyonlara bak bilgi cekenlerde while olayı koy get_mode de oldugu gibi
