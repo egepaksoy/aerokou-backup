@@ -16,9 +16,8 @@ class Vehicle():
             # 1 Metre
             self.DEG = 0.00001172485
 
-            self.get_all_drone_ids()
-
             if on_flight:
+                self.get_all_drone_ids()
                 drone_idler = self.get_all_drone_ids()
 
                 if len(self.drone_ids) == 1:
@@ -393,11 +392,17 @@ class Vehicle():
             start_time = time.time()
 
             print(f"Drone {drone_id}, Takeoff alınıyor...")
+            mode = self.get_mode(drone_id=drone_id)
             while current_alt < alt * 0.9:
                 current_alt = self.get_pos(drone_id=drone_id)[2]
+                current_mode = self.get_mode(drone_id=drone_id)
                 if time.time() - start_time > 2:
                     print(f"Drone {drone_id}, Anlık irtifa: {current_alt} metre")
                     start_time = time.time()
+        
+                if mode != current_mode:
+                    print(f"!!!! UYARI MOD DEGISTI: {mode}->{current_mode}")
+                    mode = current_mode
             
             print(f"Drone {drone_id}, {alt} metreye yükseldi")
         except Exception as e:
@@ -573,6 +578,15 @@ def calc_location(uzaklik, aci, lat, lon):
     DEG = 0.00001172485
     
     ates_pos = [uzaklik*math.sin(math.radians(aci)), uzaklik*math.cos(math.radians(aci))]
-    return lat + ates_pos[0] * DEG, lon + ates_pos[1] * DEG
+    return lat + ates_pos[0] * DEG, lon + ates_pos[1] * DEG #+ DEG*3
+
+def get_pixel_pos(line):
+    if len(line.split(",")) == 4:
+        return ((float(line.split(",")[2])-float(line.split(",")[0])) / 2, (float(line.split(",")[3])-float(line.split(",")[1])) / 2)
+    
+    elif len(line.split(",")) == 2:
+        return (float(line.split(",")[0]), float(line.split(",")[1]))
+    
+    return float(line.split(",")[0]), float(line.split(",")[1])
 
 #TODO: fonksiyonlara bak bilgi cekenlerde while olayı koy get_mode de oldugu gibi
